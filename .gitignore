@@ -1,0 +1,63 @@
+# Ignore Python virtual environment files and folders
+pyvenv.cfg
+venv/
+env/
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore packaged Lambda function zip files
+*.zip
+
+# Ignore local Terraform state files and backup files
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+terraform.rc
+.terraformrc
+
+# Ignore Terraform provider caches
+.terraform/
+
+# Ignore log files and temporary files
+*.log
+*.tmp
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore secrets or sensitive configuration files
+*.pem
+*.key
+secrets.tfvars
+
+# Ignore editor or IDE specific files
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Exclude specific generated files
+terraform/modules/frontend/flask_function/flask_function.zip
+terraform/modules/lambda/lambda_function/lambda_function.zip
+
+# If using pipenv or other Python packaging tools
+Pipfile.lock
+
+# If using AWS CLI configurations
+.aws/
+
+# Exclude package directories if not already captured
+bin/
+lib/
+include/
+lib64/
+package/
+packages/
+
+.git
+lib64

@@ -1,0 +1,893 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Survey App</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Additional styles */
+        #content {
+            margin-top: 20px;
+        }
+        .survey-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .survey-item {
+            margin: 10px 0;
+        }
+        .survey-creator {
+            color: #555;
+            margin-left: 5px;
+        }
+        .survey-actions {
+            margin-left: 10px;
+        }
+        .survey-actions a {
+            margin-right: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .btn {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0069d9;
+        }
+        .question {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .question h4 {
+            margin-top: 0;
+        }
+        .remove-question {
+            color: red;
+            cursor: pointer;
+            float: right;
+        }
+        .options-container {
+            margin-left: 20px;
+        }
+        .option-input {
+            margin-bottom: 5px;
+        }
+        .add-option {
+            color: blue;
+            cursor: pointer;
+        }
+        .preview-container {
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
+        .response {
+            margin-bottom: 20px;
+        }
+        .response hr {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation bar -->
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Survey App</h1>
+            <ul class="nav-links" id="navLinks">
+                <!-- Navigation links will be dynamically inserted here -->
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content container -->
+    <div class="container" id="content">
+        <!-- Dynamic content will be loaded here -->
+    </div>
+
+    <script>
+    (function() {
+        const apiBaseUrl = 'https://6cu1u4rdp7.execute-api.eu-central-1.amazonaws.com/prod'; // Replace with your actual API endpoint
+        const contentDiv = document.getElementById('content');
+        const navLinks = document.getElementById('navLinks');
+
+        // Check if user is logged in
+        const token = localStorage.getItem('jwtToken');
+        let isLoggedIn = false;
+
+        if (token) {
+            isLoggedIn = true;
+        }
+
+        // Initialize the page
+        initPage();
+
+        function initPage() {
+            updateNavBar();
+            if (isLoggedIn) {
+                loadDashboard();
+            } else {
+                loadLoginForm();
+            }
+        }
+
+        function updateNavBar() {
+            navLinks.innerHTML = ''; // Clear existing links
+            if (isLoggedIn) {
+                // User is logged in
+                const dashboardLink = document.createElement('li');
+                dashboardLink.innerHTML = '<a href="#" id="dashboardLink">Dashboard</a>';
+                navLinks.appendChild(dashboardLink);
+
+                const createSurveyLink = document.createElement('li');
+                createSurveyLink.innerHTML = '<a href="#" id="createSurveyLink">Create Survey</a>';
+                navLinks.appendChild(createSurveyLink);
+
+                const logoutLink = document.createElement('li');
+                logoutLink.innerHTML = '<a href="#" id="logoutLink">Logout</a>';
+                navLinks.appendChild(logoutLink);
+
+                // Add event listeners
+                document.getElementById('dashboardLink').addEventListener('click', function(event) {
+                    event.preventDefault();
+                    loadDashboard();
+                });
+
+                document.getElementById('createSurveyLink').addEventListener('click', function(event) {
+                    event.preventDefault();
+                    loadCreateSurvey();
+                });
+
+                document.getElementById('logoutLink').addEventListener('click', function(event) {
+                    event.preventDefault();
+                    logout();
+                });
+            } else {
+                // User is not logged in
+                const loginLink = document.createElement('li');
+                loginLink.innerHTML = '<a href="#" id="loginLink">Login</a>';
+                navLinks.appendChild(loginLink);
+
+                const registerLink = document.createElement('li');
+                registerLink.innerHTML = '<a href="#" id="registerLink">Register</a>';
+                navLinks.appendChild(registerLink);
+
+                // Add event listeners
+                document.getElementById('loginLink').addEventListener('click', function(event) {
+                    event.preventDefault();
+                    loadLoginForm();
+                });
+
+                document.getElementById('registerLink').addEventListener('click', function(event) {
+                    event.preventDefault();
+                    loadRegisterForm();
+                });
+            }
+        }
+
+        function loadLoginForm() {
+            contentDiv.innerHTML = `
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Login</button>
+                </form>
+            `;
+
+            document.getElementById('loginForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const response = await fetch(`${apiBaseUrl}/flask/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        localStorage.setItem('jwtToken', data.access_token);
+                        isLoggedIn = true;
+                        initPage();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Login failed. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error logging in:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        }
+
+        function loadRegisterForm() {
+            contentDiv.innerHTML = `
+                <h2>Register</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regUsername">Username:</label>
+                        <input type="text" id="regUsername" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email:</label>
+                        <input type="email" id="regEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password:</label>
+                        <input type="password" id="regPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Register</button>
+                </form>
+            `;
+
+            document.getElementById('registerForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const username = document.getElementById('regUsername').value;
+                const email = document.getElementById('regEmail').value;
+                const password = document.getElementById('regPassword').value;
+
+                try {
+                    const response = await fetch(`${apiBaseUrl}/flask/register`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, email, password })
+                    });
+
+                    if (response.ok) {
+                        alert('Registration successful. Please log in.');
+                        loadLoginForm();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Registration failed. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error registering:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        }
+
+        async function loadDashboard() {
+            if (!isLoggedIn) {
+                alert('Please log in first.');
+                loadLoginForm();
+                return;
+            }
+
+            const token = localStorage.getItem('jwtToken');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/get_all_surveys`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySurveys(data.surveys);
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load surveys.');
+                }
+            } catch (error) {
+                console.error('Error loading surveys:', error);
+                alert('An error occurred while loading surveys.');
+            }
+        }
+
+        function displaySurveys(surveys) {
+            contentDiv.innerHTML = ''; // Clear previous content
+
+            if (!surveys || surveys.length === 0) {
+                contentDiv.innerHTML = '<p>No surveys available.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'survey-list';
+
+            surveys.forEach(survey => {
+                const listItem = document.createElement('li');
+                listItem.className = 'survey-item';
+
+                // Create a link for the survey title
+                const link = document.createElement('a');
+                link.href = '#';
+                link.textContent = survey.title;
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    loadSurveyDetails(survey.survey_id);
+                });
+
+                // Display survey creator
+                const creatorSpan = document.createElement('span');
+                creatorSpan.className = 'survey-creator';
+                creatorSpan.textContent = ` (by ${survey.username})`;
+
+                listItem.appendChild(link);
+                listItem.appendChild(creatorSpan);
+
+                // Actions for the survey
+                const actionsSpan = document.createElement('span');
+                actionsSpan.className = 'survey-actions';
+
+                // If the survey was created by the current user, add "View Results" and "Delete" links
+                const currentUsername = getCurrentUsername();
+                if (survey.username === currentUsername) {
+                    const resultsLink = document.createElement('a');
+                    resultsLink.href = '#';
+                    resultsLink.textContent = '[View Results]';
+                    resultsLink.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        loadSurveyResponses(survey.survey_id);
+                    });
+                    actionsSpan.appendChild(resultsLink);
+
+                    // Add Delete link
+                    const deleteLink = document.createElement('a');
+                    deleteLink.href = '#';
+                    deleteLink.textContent = '[Delete]';
+                    deleteLink.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        deleteSurvey(survey.survey_id);
+                    });
+                    actionsSpan.appendChild(deleteLink);
+                }
+
+                listItem.appendChild(actionsSpan);
+                list.appendChild(listItem);
+            });
+
+            contentDiv.appendChild(list);
+        }
+
+        function getCurrentUsername() {
+            const token = localStorage.getItem('jwtToken');
+            if (token) {
+                const decodedToken = parseJwt(token);
+                return decodedToken['cognito:username'] || decodedToken['username'];
+            }
+            return '';
+        }
+
+        function parseJwt(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = atob(base64Url.replace(/-/g, '+').replace(/_/g, '/'));
+            const jsonPayload = decodeURIComponent(
+                base64
+                    .split('')
+                    .map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join('')
+            );
+            return JSON.parse(jsonPayload);
+        }
+
+        function logout() {
+            localStorage.removeItem('jwtToken');
+            isLoggedIn = false;
+            initPage();
+        }
+
+        function loadCreateSurvey() {
+            if (!isLoggedIn) {
+                alert('Please log in first.');
+                loadLoginForm();
+                return;
+            }
+
+            contentDiv.innerHTML = `
+                <h2>Create a New Survey</h2>
+                <form id="createSurveyForm">
+                    <div class="form-group">
+                        <label for="title">Survey Title:</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Survey Description:</label>
+                        <textarea id="description" name="description"></textarea>
+                    </div>
+                    <h3>Questions:</h3>
+                    <div id="questionsContainer">
+                        <!-- Questions will be added here dynamically -->
+                    </div>
+                    <button type="button" id="addQuestionBtn">Add Question</button>
+                    <br><br>
+                    <button type="submit" class="btn">Create Survey</button>
+                </form>
+            `;
+
+            let questionCount = 0;
+
+            document.getElementById('addQuestionBtn').addEventListener('click', function() {
+                addQuestion();
+            });
+
+            document.getElementById('createSurveyForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const token = localStorage.getItem('jwtToken');
+                if (!token) {
+                    alert('Please log in first.');
+                    return;
+                }
+
+                const title = document.getElementById('title').value;
+                const description = document.getElementById('description').value;
+                const questions = [];
+
+                for (let i = 0; i < questionCount; i++) {
+                    const questionText = document.getElementById(`question_${i}_text`).value;
+                    const questionType = document.getElementById(`question_${i}_type`).value;
+                    let options = [];
+
+                    if (questionType === 'multiple-choice' || questionType === 'checkbox') {
+                        const optionElements = document.querySelectorAll(`#options_container_${i} .option-input`);
+                        optionElements.forEach(element => {
+                            if (element.value.trim() !== '') {
+                                options.push(element.value.trim());
+                            }
+                        });
+                        if (options.length === 0) {
+                            alert(`Please add options for question ${i + 1}.`);
+                            return;
+                        }
+                    }
+
+                    if (questionText.trim() === '') {
+                        alert(`Please enter a question text for question ${i + 1}.`);
+                        return;
+                    }
+
+                    const question = {
+                        question_text: questionText,
+                        question_type: questionType,
+                        options: options
+                    };
+
+                    questions.push(question);
+                }
+
+                if (questions.length === 0) {
+                    alert('Please add at least one question.');
+                    return;
+                }
+
+                const surveyData = {
+                    title: title,
+                    description: description,
+                    questions: questions
+                };
+
+                try {
+                    const response = await fetch(`${apiBaseUrl}/flask/create_survey`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(surveyData)
+                    });
+
+                    if (response.ok) {
+                        alert('Survey created successfully!');
+                        loadDashboard();
+                    } else if (response.status === 401) {
+                        alert('Session expired. Please log in again.');
+                        logout();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Failed to create survey. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error creating survey:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+
+            function addQuestion() {
+                const container = document.getElementById('questionsContainer');
+
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question';
+                questionDiv.id = `question_${questionCount}`;
+
+                const removeLink = document.createElement('span');
+                removeLink.className = 'remove-question';
+                removeLink.textContent = 'Remove';
+                removeLink.addEventListener('click', function() {
+                    container.removeChild(questionDiv);
+                });
+
+                const questionHeader = document.createElement('h4');
+                questionHeader.textContent = `Question ${questionCount + 1}`;
+
+                const questionLabel = document.createElement('label');
+                questionLabel.textContent = 'Question Text:';
+
+                const questionInput = document.createElement('input');
+                questionInput.type = 'text';
+                questionInput.id = `question_${questionCount}_text`;
+                questionInput.required = true;
+
+                const typeLabel = document.createElement('label');
+                typeLabel.textContent = 'Question Type:';
+
+                const typeSelect = document.createElement('select');
+                typeSelect.id = `question_${questionCount}_type`;
+                typeSelect.required = true;
+
+                const optionText = document.createElement('option');
+                optionText.value = 'text';
+                optionText.textContent = 'Text';
+
+                const optionMC = document.createElement('option');
+                optionMC.value = 'multiple-choice';
+                optionMC.textContent = 'Multiple Choice';
+
+                const optionCheckbox = document.createElement('option');
+                optionCheckbox.value = 'checkbox';
+                optionCheckbox.textContent = 'Checkbox';
+
+                // Append options in the desired order
+                typeSelect.appendChild(optionMC);
+                typeSelect.appendChild(optionCheckbox);
+                typeSelect.appendChild(optionText);
+
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'options-container';
+                optionsContainer.id = `options_container_${questionCount}`;
+                optionsContainer.style.display = 'none';
+
+                const addOptionLink = document.createElement('span');
+                addOptionLink.className = 'add-option';
+                addOptionLink.textContent = 'Add Option';
+                addOptionLink.addEventListener('click', function() {
+                    addOption(questionCount, optionsContainer);
+                });
+
+                const previewContainer = document.createElement('div');
+                previewContainer.className = 'preview-container';
+                previewContainer.id = `preview_container_${questionCount}`;
+
+                typeSelect.addEventListener('change', function() {
+                    if (typeSelect.value === 'multiple-choice' || typeSelect.value === 'checkbox') {
+                        optionsContainer.style.display = 'block';
+                        addOptionLink.style.display = 'inline';
+                        previewContainer.innerHTML = '<p>Add options to see a preview.</p>';
+                    } else {
+                        optionsContainer.style.display = 'none';
+                        addOptionLink.style.display = 'none';
+                        previewContainer.innerHTML = getAnswerInputPreview(typeSelect.value);
+                    }
+                });
+
+                questionDiv.appendChild(removeLink);
+                questionDiv.appendChild(questionHeader);
+                questionDiv.appendChild(questionLabel);
+                questionDiv.appendChild(questionInput);
+                questionDiv.appendChild(document.createElement('br'));
+                questionDiv.appendChild(typeLabel);
+                questionDiv.appendChild(typeSelect);
+                questionDiv.appendChild(document.createElement('br'));
+                questionDiv.appendChild(optionsContainer);
+                questionDiv.appendChild(addOptionLink);
+                questionDiv.appendChild(previewContainer);
+
+                container.appendChild(questionDiv);
+                questionCount++;
+            }
+
+            function addOption(questionIndex, container) {
+                const optionInput = document.createElement('input');
+                optionInput.type = 'text';
+                optionInput.className = 'option-input';
+                optionInput.placeholder = 'Option text';
+
+                const removeOptionLink = document.createElement('span');
+                removeOptionLink.className = 'remove-question';
+                removeOptionLink.textContent = 'Remove';
+                removeOptionLink.addEventListener('click', function() {
+                    container.removeChild(optionDiv);
+                    updateAnswerPreview(questionIndex);
+                });
+
+                optionInput.addEventListener('input', function() {
+                    updateAnswerPreview(questionIndex);
+                });
+
+                const optionDiv = document.createElement('div');
+                optionDiv.appendChild(optionInput);
+                optionDiv.appendChild(removeOptionLink);
+
+                container.appendChild(optionDiv);
+
+                // Update the answer preview after adding a new option
+                updateAnswerPreview(questionIndex);
+            }
+
+            function getAnswerInputPreview(type) {
+                if (type === 'text') {
+                    return '<input type="text" disabled placeholder="Text answer preview">';
+                } else if (type === 'multiple-choice' || type === 'checkbox') {
+                    return '<p>Add options to see a preview.</p>';
+                }
+                return '';
+            }
+
+            function updateAnswerPreview(questionIndex) {
+                const options = [];
+                const optionElements = document.querySelectorAll(`#options_container_${questionIndex} .option-input`);
+                optionElements.forEach(element => {
+                    if (element.value.trim() !== '') {
+                        options.push(element.value.trim());
+                    }
+                });
+                const typeSelect = document.getElementById(`question_${questionIndex}_type`);
+                const previewContainer = document.getElementById(`preview_container_${questionIndex}`);
+                if (typeSelect.value === 'multiple-choice') {
+                    // Now 'multiple-choice' allows multiple selections (checkboxes)
+                    previewContainer.innerHTML = options.map(option => `<div><input type="checkbox" disabled> ${option}</div>`).join('');
+                } else if (typeSelect.value === 'checkbox') {
+                    // Now 'checkbox' allows only one selection (radio buttons)
+                    previewContainer.innerHTML = options.map(option => `<div><input type="radio" disabled> ${option}</div>`).join('');
+                } else if (typeSelect.value === 'text') {
+                    previewContainer.innerHTML = '<input type="text" disabled placeholder="Text answer preview">';
+                }
+            }
+        }
+
+        async function deleteSurvey(surveyId) {
+            if (confirm('Are you sure you want to delete this survey?')) {
+                const token = localStorage.getItem('jwtToken');
+                try {
+                    const response = await fetch(`${apiBaseUrl}/flask/survey/${surveyId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        alert('Survey deleted successfully.');
+                        loadDashboard();
+                    } else if (response.status === 401) {
+                        alert('Session expired. Please log in again.');
+                        logout();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Failed to delete survey. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting survey:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            }
+        }
+
+        async function loadSurveyDetails(surveyId) {
+            if (!isLoggedIn) {
+                alert('Please log in first.');
+                loadLoginForm();
+                return;
+            }
+
+            const token = localStorage.getItem('jwtToken');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/survey/${surveyId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const survey = await response.json();
+                    displaySurveyDetails(survey);
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load survey details.');
+                }
+            } catch (error) {
+                console.error('Error loading survey details:', error);
+                alert('An error occurred while loading survey details.');
+            }
+        }
+
+        function displaySurveyDetails(survey) {
+            if (!survey.questions) {
+                alert('Survey data is incomplete.');
+                return;
+            }
+
+            contentDiv.innerHTML = `
+                <h2>${survey.title}</h2>
+                <p>${survey.description}</p>
+                <form id="surveyForm">
+                    ${survey.questions.map((question, index) => `
+                        <div class="form-group">
+                            <label>${question.question_text}</label>
+                            ${getQuestionInput(question, index)}
+                        </div>
+                    `).join('')}
+                    <button type="submit" class="btn">Submit Answers</button>
+                </form>
+            `;
+
+            document.getElementById('surveyForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const token = localStorage.getItem('jwtToken');
+                const answers = [];
+
+                for (let i = 0; i < survey.questions.length; i++) {
+                    const question = survey.questions[i];
+                    const index = i;
+
+                    if (question.question_type === 'multiple-choice') {
+                        // Now 'multiple-choice' allows multiple selections (checkboxes)
+                        const checkboxes = document.querySelectorAll(`input[name="answer_${index}"]:checked`);
+                        const selectedOptions = [];
+                        checkboxes.forEach(checkbox => {
+                            selectedOptions.push(checkbox.value);
+                        });
+                        answers.push(selectedOptions);
+                    } else if (question.question_type === 'checkbox') {
+                        // Now 'checkbox' allows only one selection (radio buttons)
+                        const radio = document.querySelector(`input[name="answer_${index}"]:checked`);
+                        if (radio) {
+                            answers.push(radio.value);
+                        } else {
+                            alert(`Please select an option for question ${index + 1}.`);
+                            return;
+                        }
+                    } else {
+                        const answerElement = document.querySelector(`input[name="answer_${index}"], textarea[name="answer_${index}"]`);
+                        if (answerElement && answerElement.value.trim() !== '') {
+                            answers.push(answerElement.value.trim());
+                        } else {
+                            alert(`Please provide an answer for question ${index + 1}.`);
+                            return;
+                        }
+                    }
+                }
+
+                try {
+                    const response = await fetch(`${apiBaseUrl}/flask/submit_survey`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            'survey_id': survey.survey_id,
+                            'answers': answers
+                        })
+                    });
+
+                    if (response.ok) {
+                        alert('Thank you for submitting your answers!');
+                        loadDashboard();
+                    } else if (response.status === 401) {
+                        alert('Session expired. Please log in again.');
+                        logout();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Failed to submit answers. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error submitting answers:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        }
+
+        function getQuestionInput(question, index) {
+            if (question.question_type === 'text') {
+                return `<input type="text" name="answer_${index}" required>`;
+            } else if (question.question_type === 'multiple-choice') {
+                // Now 'multiple-choice' allows multiple selections (checkboxes)
+                return question.options.map(option => `
+                    <div>
+                        <input type="checkbox" name="answer_${index}" value="${option}"> ${option}
+                    </div>
+                `).join('');
+            } else if (question.question_type === 'checkbox') {
+                // Now 'checkbox' allows only one selection (radio buttons)
+                return question.options.map(option => `
+                    <div>
+                        <input type="radio" name="answer_${index}" value="${option}" required> ${option}
+                    </div>
+                `).join('');
+            }
+            return '';
+        }
+
+        async function loadSurveyResponses(surveyId) {
+            if (!isLoggedIn) {
+                alert('Please log in first.');
+                loadLoginForm();
+                return;
+            }
+
+            const token = localStorage.getItem('jwtToken');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/survey/${surveyId}/responses`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySurveyResponses(data.responses);
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load survey responses.');
+                }
+            } catch (error) {
+                console.error('Error loading survey responses:', error);
+                alert('An error occurred while loading survey responses.');
+            }
+        }
+
+        function displaySurveyResponses(responses) {
+            contentDiv.innerHTML = '<h2>Survey Responses</h2>';
+
+            if (!responses || responses.length === 0) {
+                contentDiv.innerHTML += '<p>No responses available.</p>';
+                return;
+            }
+
+            responses.forEach((response, responseIndex) => {
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'response';
+                responseDiv.innerHTML = `
+                    <p><strong>Response ${responseIndex + 1}</strong></p>
+                    <p><strong>User:</strong> ${response.username || 'Anonymous'}</p>
+                    <p><strong>Timestamp:</strong> ${new Date(response.timestamp * 1000).toLocaleString()}</p>
+                    ${response.answers.map((answer, index) => `
+                        <p><strong>Question ${index + 1}:</strong> ${Array.isArray(answer) ? answer.join(', ') : answer}</p>
+                    `).join('')}
+                    <hr>
+                `;
+                contentDiv.appendChild(responseDiv);
+            });
+        }
+
+    })();
+    </script>
+</body>
+</html>

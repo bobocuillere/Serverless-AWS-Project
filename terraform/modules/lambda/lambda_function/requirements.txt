@@ -1,0 +1,4 @@
+boto3
+requests
+PyJWT
+cryptography==36.0.0

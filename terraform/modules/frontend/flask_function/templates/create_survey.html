@@ -1,0 +1,141 @@
+<!-- create_survey.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Survey - Survey App</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Survey App</h1>
+            <ul class="nav-links">
+                <li><a href="#" id="dashboardLink">Dashboard</a></li>
+                <li><a href="#" id="logoutLink">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>Create Survey</h1>
+        <form id="createSurveyForm">
+            <div class="form-group">
+                <label for="survey_title">Survey Title:</label>
+                <input type="text" id="survey_title" name="survey_title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="questions">Questions (separate by newline):</label>
+                <textarea id="questions" name="questions" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="btn">Create Survey</button>
+        </form>
+    </div>
+
+    <script>
+    (function() {
+        const apiBaseUrl = 'https://9xzp219l4c.execute-api.eu-central-1.amazonaws.com/prod';
+
+        document.getElementById('dashboardLink').addEventListener('click', function(event) {
+            event.preventDefault();
+            loadDashboard();
+        });
+
+        document.getElementById('logoutLink').addEventListener('click', function(event) {
+            event.preventDefault();
+            logout();
+        });
+
+        document.getElementById('createSurveyForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const token = localStorage.getItem('jwtToken');
+            const surveyTitle = document.getElementById('survey_title').value;
+            const description = document.getElementById('description').value;
+            const questionsText = document.getElementById('questions').value;
+
+            // Split questions by newline
+            const questions = questionsText.split('\n').map(q => q.trim()).filter(q => q);
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/create_survey`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        'title': surveyTitle,
+                        'description': description,
+                        'questions': questions
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Survey created successfully.');
+                    // Redirect back to dashboard
+                    loadDashboard();
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Failed to create survey. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error creating survey:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+
+        async function loadDashboard() {
+            const token = localStorage.getItem('jwtToken');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const dashboardHtml = await response.text();
+                    // Replace the current page content with the dashboard
+                    document.open();
+                    document.write(dashboardHtml);
+                    document.close();
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load dashboard. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('jwtToken');
+            // Redirect to login page
+            fetch('index.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(error => {
+                    console.error('Error loading login page:', error);
+                    alert('An error occurred. Please try again.');
+                });
+        }
+    })();
+    </script>
+</body>
+</html>

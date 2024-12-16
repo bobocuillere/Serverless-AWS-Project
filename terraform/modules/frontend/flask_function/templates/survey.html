@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Survey</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>{{ survey.title }}</h1>
+        <form action="{{ url_for('survey', survey_id=survey.id) }}" method="post" class="form">
+            {% for question in survey.questions %}
+                <div class="form-group">
+                    <label>{{ question }}</label>
+                    <input type="text" name="answers" required>
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn">Submit Survey</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Survey App by Sophnel</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">Survey App</h1>
+            <ul class="nav-links">
+                <li><a href="#" id="createSurveyLink">Create Survey</a></li>
+                <li><a href="#" id="logoutLink">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <h2>Welcome, {{ username }}</h2>
+        <div id="surveysContainer">
+            <!-- Surveys will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const apiBaseUrl = 'https://9xzp219l4c.execute-api.eu-central-1.amazonaws.com/prod';
+
+        document.getElementById('createSurveyLink').addEventListener('click', function(event) {
+            event.preventDefault();
+            loadCreateSurvey();
+        });
+
+        document.getElementById('logoutLink').addEventListener('click', function(event) {
+            event.preventDefault();
+            logout();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSurveys();
+        });
+
+        async function loadCreateSurvey() {
+            const token = localStorage.getItem('jwtToken');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/create_survey`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const createSurveyHtml = await response.text();
+                    // Replace the current page content with the create survey form
+                    document.open();
+                    document.write(createSurveyHtml);
+                    document.close();
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load Create Survey page. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error loading Create Survey page:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('jwtToken');
+            // Redirect to login page
+            fetch('index.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(error => {
+                    console.error('Error loading login page:', error);
+                    alert('An error occurred. Please try again.');
+                });
+        }
+
+        async function loadSurveys() {
+            const token = localStorage.getItem('jwtToken');
+            try {
+                const response = await fetch(`${apiBaseUrl}/flask/get_surveys`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySurveys(data.surveys);
+                } else if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    logout();
+                } else {
+                    alert('Failed to load surveys.');
+                }
+            } catch (error) {
+                console.error('Error loading surveys:', error);
+                alert('An error occurred while loading surveys.');
+            }
+        }
+
+        function displaySurveys(surveys) {
+            const container = document.getElementById('surveysContainer');
+            container.innerHTML = ''; // Clear previous content
+
+            if (!surveys || surveys.length === 0) {
+                container.innerHTML = '<p>No surveys created yet.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'survey-list';
+
+            surveys.forEach(survey => {
+                const listItem = document.createElement('li');
+                listItem.className = 'survey-item';
+                listItem.textContent = survey.title;
+                list.appendChild(listItem);
+            });
+
+            container.appendChild(list);
+        }
+    })();
+    </script>
+</body>
+</html>
