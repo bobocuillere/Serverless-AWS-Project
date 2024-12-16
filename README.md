@@ -1,7 +1,8 @@
 # Fully Serverless Survey Application on AWS
 ![Serverless Architecture](serverless.png)
 
-You can get more details from my blog article --> 
+You can get more details from my blog article --> https://medium.com/@sophnel/serverless-survey-application-end-to-end-on-aws-with-python-and-terraform-e5334d5e550b
+
 This repository contains a fully serverless web application built from scratch on AWS using Python. The application allows users to register, log in, create surveys, submit responses, and view results. It leverages the following AWS services:
 
 - **Amazon Cognito** for user authentication and JWT token issuance.
